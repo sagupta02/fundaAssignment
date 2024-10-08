@@ -1,0 +1,58 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 * * * *'  # Run the test job every hour
+
+jobs:
+  lint:
+    name: Lint and Code Style Check
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'schedule' }}  # Skip linting for scheduled jobs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npx eslint . --ext .js,.mjs
+      - name: Run Prettier Check
+        run: npx prettier --check .
+
+  test:
+    name: Run Playwright Tests  # Added a name for consistency
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Get Variables
+        run: |
+          echo "USER_AGENT_SECRET=${{ secrets.USER_AGENT_SECRET }}" >> $GITHUB_ENV
+          echo "LOGIN_USERNAME=${{ secrets.LOGIN_USERNAME }}" >> $GITHUB_ENV
+          echo "LOGIN_PASSWORD=${{ secrets.LOGIN_PASSWORD }}" >> $GITHUB_ENV
+      - name: Print env variables
+        run: |
+          echo "The value of USER_AGENT_SECRET is: $USER_AGENT_SECRET"
+          echo "The value of LOGIN_USERNAME is: $LOGIN_USERNAME"
+          echo "The value of LOGIN_PASSWORD is: $LOGIN_PASSWORD"
+      - name: Run Playwright tests
+        run: make run-test-headless
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
