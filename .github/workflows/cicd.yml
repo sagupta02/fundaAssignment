@@ -27,7 +27,6 @@ jobs:
 
   test:
     name: Run Playwright Tests # Added a name for consistency
-    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
